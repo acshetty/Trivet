@@ -11,13 +11,15 @@ parser.add_option("-n", "--name", dest="filename",help="Name for Outputs", metav
 parser.add_option("-o", "--outdir", dest="outdir",help="Path to Output Directory", metavar="PATH")
 parser.add_option("-b", "--refindex", dest="ref",help="Path to indexed reference", metavar="PATH")
 parser.add_option("-r", "--ref", dest="reff",help="Path to reference", metavar="PATH")
+parser.add_option("-a", "--aligner", dest="aligner",help="What aligner would you like to use (bowtie2 or hisat2)", metavar="bowtie2/hisat2")
 (options, args) = parser.parse_args()
 
-#Jan28
+#Feb 14
 #make -b optional
 #check json file format
 #add bowtie build component
 #indicate in -h if arg is optional or not
+#check what aligner to use
 
 def main():
     if options.info and options.outdir:
@@ -33,18 +35,41 @@ def main():
         pre=presub_QC(info, options.outdir,options.reff,name)
         samples=info["SampleID"]
         snum=len(info)
+        ireff=0
+        if(options.ref):
+            treff=False
+            ireff=options.ref
+        else:
+            treff=True
+            ireff=aligner(options.reff, options.outdir, name,options.aligner)
         # for each sample make json and append wdl command to shell script
         for i in samples:
             tmp=info.loc[info['SampleID']==i]
             #tmp=tp.drop(index=True)
             tmp.reset_index(drop=True,inplace=True)
             print(tmp)
-            jsonstr=makedf(i, tmp, name, options.outdir,options.ref,options.reff)
+            jsonstr=makedf(i, tmp, name, options.outdir,ireff,options.reff,options.aligner,treff)
             jname=options.outdir+"/"+i+".json"
             jobj=json.loads(jsonstr)
             with open(jname, 'w') as json_file:
                 json.dump(jobj[0], json_file,indent=4,sort_keys=True)
             wdlsh=shwdl(name,jname, options.outdir)
+
+
+def aligner(ref, outdir, name, tool):
+    if(tool=="bowtie2"):
+        b2dir=outdir+"/Bowtie2_Build/"
+        if not os.path.exists(b2dir):
+            os.makedirs(b2dir)
+        b2path=outdir+"/Bowtie2_Build/"+name 
+    elif(tool=="hisat2"):
+        b2dir=outdir+"/Hisat2_Build/"
+        if not os.path.exists(b2dir):
+            os.makedirs(b2dir)
+        b2path=outdir+"/Hisat2_Build/"+name
+    else:
+        print("No aligner selected")
+    return b2path
 
 def shwdl(name, jsonpath, outdir):
     #Write shell script
@@ -54,11 +79,11 @@ def shwdl(name, jsonpath, outdir):
         myfile.write(st+"\n")
 
 
-def makedf(sample, df,name, outdir,refbuild,ref):
+def makedf(sample, df,name, outdir,refbuild,ref,tool,treff):
     #make json
     aqcout=outdir+"/AlignStats/"
     fqcout=outdir+"/fastQC/"
-    bowtie2out=outdir+"/Bowtie2/"+sample+"/"
+    bowtie2out=outdir+"/"+tool+"/"+sample+"/"
     sam2bamout=outdir+"/Sorted_Files/Temp/"+sample+"/"
     sortedout=outdir+"/Sorted_Files/"+sample+"/"
     if not os.path.exists(outdir):
@@ -87,6 +112,8 @@ def makedf(sample, df,name, outdir,refbuild,ref):
         'main_workflow.ref_fqc':ref,
         'main_workflow.temp_bam':temp_bam,
         'main_workflow.sort_name':sortnameout,
+        'main_workflow.aligner':tool,
+        'main_workflow.buildref':treff,
         'main_workflow.sort_pos':sortposout}]
     jsonStr = json.dumps(dat,indent=4,sort_keys=True)
 #    print(jsonStr)
