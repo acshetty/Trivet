@@ -8,7 +8,7 @@ workflow B2BWorkflow {
 
     call b2build { input: fref=fref,outdir=outdir }
     output{
-        String indexout=b2build.outfile
+        String indxout=b2build.outf
     }
 }
 
@@ -22,7 +22,7 @@ task b2build {
         bowtie2-build -f ${fref} ${outdir}
     }
     output{
-        File outfile=outdir
+        String outf=outdir
     }
     meta {
         author: "Apaala Chatterjee"

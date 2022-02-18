@@ -22,7 +22,7 @@ task h2build {
         hisat2-build -f ${fref} ${outdir}
     }
     output{
-        File outfile=outdir
+        String outfile=outdir
     }
     meta {
         author: "Apaala Chatterjee"
