@@ -48,8 +48,8 @@ def main():
             #tmp=tp.drop(index=True)
             tmp.reset_index(drop=True,inplace=True)
             print(tmp)
-            jsonstr=makedf(i, tmp, name, options.outdir,ireff,options.reff,options.aligner,treff)
-            jname=options.outdir+"/"+i+".json"
+            jsonstr=makedf_alignment_recipe(i, tmp, name, options.outdir,ireff,options.reff,options.aligner,treff)
+            jname=options.outdir+"/Setup/"+i+".json"
             jobj=json.loads(jsonstr)
             with open(jname, 'w') as json_file:
                 json.dump(jobj[0], json_file,indent=4,sort_keys=True)
@@ -57,12 +57,12 @@ def main():
 
 
 def aligner(ref, outdir, name, tool):
-    if(tool=="bowtie2"):
+    if tool=="bowtie2":
         b2dir=outdir+"/Bowtie2_Build/"
         if not os.path.exists(b2dir):
             os.makedirs(b2dir)
         b2path=outdir+"/Bowtie2_Build/"+name 
-    elif(tool=="hisat2"):
+    elif tool=="hisat2":
         b2dir=outdir+"/Hisat2_Build/"
         if not os.path.exists(b2dir):
             os.makedirs(b2dir)
@@ -73,19 +73,25 @@ def aligner(ref, outdir, name, tool):
 
 def shwdl(name, jsonpath, outdir):
     #Write shell script
-    fname=outdir+"/"+name+"_wdl.sh"
+    fname=outdir+"/Setup/"+name+"_wdl.sh"
     with open(fname, "a") as myfile:
-        st="cromwell run main.wdl -i "+ jsonpath
+        st="cromwell run rAlignment.wdl -i "+ jsonpath
         myfile.write(st+"\n")
 
 
-def makedf(sample, df,name, outdir,refbuild,ref,tool,treff):
+def makedf_alignment_recipe(sample, df,name, outdir,refbuild,ref,tool,treff):
+    #add  os.path.normpath()
     #make json
+    if tool=='hisat2':
+        tool1="Hisat2"
+    if tool=='bowtie2':
+        tool1="Bowtie2"
     aqcout=outdir+"/AlignStats/"
-    fqcout=outdir+"/fastQC/"
-    bowtie2out=outdir+"/"+tool+"/"+sample+"/"
+    fqcout=outdir+"/FastQC/"+sample
+    bowtie2out=outdir+"/"+tool1+"/"+sample+"/"
     sam2bamout=outdir+"/Sorted_Files/Temp/"+sample+"/"
     sortedout=outdir+"/Sorted_Files/"+sample+"/"
+    shellout=outdir+"/Setup/"+sample+"/"
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if not os.path.exists(aqcout):
@@ -98,23 +104,25 @@ def makedf(sample, df,name, outdir,refbuild,ref,tool,treff):
         os.makedirs(sam2bamout)
     if not os.path.exists(sortedout):
         os.makedirs(sortedout)
+    if not os.path.exists(shellout):
+        os.makedirs(shellout)
     samf=bowtie2out+name+"_"+sample+".sam"
     temp_bam=sam2bamout+name+"_"+sample+".bam"
     aqcout=aqcout+sample+".stats"
     sortnameout=sortedout+sample+"_sortedbyname.bam"
     sortposout=sortedout+sample+"_sortedbypos.bam"
-    dat=[{'main_workflow.fq_input1':df['Read.File1'][0],
-        'main_workflow.fq_input2': df['Read.File2'][0],
-        'main_workflow.outdir':fqcout,
-        'main_workflow.build_ref':refbuild,
-        'main_workflow.aqc_out':aqcout,
-        'main_workflow.outfile':samf,
-        'main_workflow.ref_fqc':ref,
-        'main_workflow.temp_bam':temp_bam,
-        'main_workflow.sort_name':sortnameout,
-        'main_workflow.aligner':tool,
-        'main_workflow.buildref':treff,
-        'main_workflow.sort_pos':sortposout}]
+    dat=[{'alignment_recipe_workflow.fq_input1':df['Read.File1'][0],
+        'alignment_recipe_workflow.fq_input2': df['Read.File2'][0],
+        'alignment_recipe_workflow.outdir':fqcout,
+        'alignment_recipe_workflow.build_ref':refbuild,
+        'alignment_recipe_workflow.aqc_out':aqcout,
+        'alignment_recipe_workflow.outfile':samf,
+        'alignment_recipe_workflow.ref_fqc':ref,
+        'alignment_recipe_workflow.temp_bam':temp_bam,
+        'alignment_recipe_workflow.sort_name':sortnameout,
+        'alignment_recipe_workflow.aligner':tool,
+        'alignment_recipe_workflow.buildref':treff,
+        'alignment_recipe_workflow.sort_pos':sortposout}]
     jsonStr = json.dumps(dat,indent=4,sort_keys=True)
 #    print(jsonStr)
     return jsonStr
