@@ -9,6 +9,7 @@ import "sort_by_name.wdl" as sortbyname
 import "hisat2_build.wdl" as hisat_build
 import "bowtie2_build.wdl" as bowtie2_build
 import "hisat2.wdl" as hisat2
+import "summary_stats.wdl" as summary
 
 workflow alignment_recipe_workflow {
     input{
@@ -23,6 +24,8 @@ workflow alignment_recipe_workflow {
         String sort_pos
         String sort_name
         String aligner
+        String refflat
+        String stat_out
         Boolean buildref
     } 
 
@@ -36,13 +39,15 @@ workflow alignment_recipe_workflow {
     call sam2bam.Sam2BamWorkflow as s2b { input: input_sam=alnb2b.Soutfile, temp_bam=temp_bam}
     call sortbypos.SortPosWorkflow as sbp {input: temp_bam=s2b.outfile, sort_pos=sort_pos}
     call sortbyname.SortNameWorkflow as sbn {input: temp_bam=s2b.outfile, sort_name=sort_name}
-   }
+    call summary.SSWorkflow as statsn {input: bam_input=sbp.sortbam, stat_out=stat_out,refflat=refflat }
+    }
     if(!buildref){
     call aln.ALNWorkflow as alnd{ input: fq_input1=fq_input1,fq_input2=fq_input2, ref_fqc=ref_fqc, build_ref=build_ref, outfile=outfile, aqc_out=aqc_out}
     call aqc.AQCWorkflow as aqcd  { input: sam_input=alnd.Soutfile, aqc_out=aqc_out}
     call sam2bam.Sam2BamWorkflow as s2bd { input: input_sam=alnd.Soutfile, temp_bam=temp_bam}
     call sortbypos.SortPosWorkflow as sbpd {input: temp_bam=s2bd.outfile, sort_pos=sort_pos}
     call sortbyname.SortNameWorkflow as sbnd {input: temp_bam=s2bd.outfile, sort_name=sort_name}
+    call summary.SSWorkflow as statsn1 {input: bam_input=sbpd.sortbam, stat_out=stat_out,refflat=refflat }
 }}
     if(aligner=="hisat2"){
     if(buildref){
@@ -53,6 +58,7 @@ workflow alignment_recipe_workflow {
     call sam2bam.Sam2BamWorkflow as s2bhisat { input: input_sam=alnh2b.Soutfile, temp_bam=temp_bam}
     call sortbypos.SortPosWorkflow as sbphisat {input: temp_bam=s2bhisat.outfile, sort_pos=sort_pos}
     call sortbyname.SortNameWorkflow as sbnhisat {input: temp_bam=s2bhisat.outfile, sort_name=sort_name}
+    call summary.SSWorkflow as statsnH {input: bam_input=sbphisat.sortbam, stat_out=stat_out,refflat=refflat }
     }
     if(!buildref){
     call hisat2.Hisat2Workflow as alnh2bd{ input: fq_input1=fq_input1,fq_input2=fq_input2, ref_fqc=ref_fqc, build_ref=build_ref, outfile=outfile, aqc_out=aqc_out}
@@ -60,6 +66,7 @@ workflow alignment_recipe_workflow {
     call sam2bam.Sam2BamWorkflow as s2bhisatd { input: input_sam=alnh2bd.Soutfile, temp_bam=temp_bam}
     call sortbypos.SortPosWorkflow as sbphisatd {input: temp_bam=s2bhisatd.outfile, sort_pos=sort_pos}
     call sortbyname.SortNameWorkflow as sbnhisatd {input: temp_bam=s2bhisatd.outfile, sort_name=sort_name}
+    call summary.SSWorkflow as statsnd {input: bam_input=sbphisatd.sortbam, stat_out=stat_out,refflat=refflat }
 }
 }
 }

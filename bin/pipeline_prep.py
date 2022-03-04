@@ -12,6 +12,7 @@ parser.add_option("-o", "--outdir", dest="outdir",help="Path to Output Directory
 parser.add_option("-b", "--refindex", dest="ref",help="Path to indexed reference", metavar="PATH")
 parser.add_option("-r", "--ref", dest="reff",help="Path to reference", metavar="PATH")
 parser.add_option("-a", "--aligner", dest="aligner",help="What aligner would you like to use (bowtie2 or hisat2)", metavar="bowtie2/hisat2")
+parser.add_option("-g", "--refflat", dest="refflat",help="Path to refflat format annotation", metavar="PATH")
 (options, args) = parser.parse_args()
 
 #Feb 14
@@ -48,7 +49,7 @@ def main():
             #tmp=tp.drop(index=True)
             tmp.reset_index(drop=True,inplace=True)
             print(tmp)
-            jsonstr=makedf_alignment_recipe(i, tmp, name, options.outdir,ireff,options.reff,options.aligner,treff)
+            jsonstr=makedf_alignment_recipe(i, tmp, name, options.outdir,ireff,options.reff,options.aligner,treff,options.refflat)
             jname=options.outdir+"/Setup/"+i+".json"
             jobj=json.loads(jsonstr)
             with open(jname, 'w') as json_file:
@@ -79,7 +80,7 @@ def shwdl(name, jsonpath, outdir):
         myfile.write(st+"\n")
 
 
-def makedf_alignment_recipe(sample, df,name, outdir,refbuild,ref,tool,treff):
+def makedf_alignment_recipe(sample, df,name, outdir,refbuild,ref,tool,treff,refflat):
     #add  os.path.normpath()
     #make json
     if tool=='hisat2':
@@ -87,6 +88,7 @@ def makedf_alignment_recipe(sample, df,name, outdir,refbuild,ref,tool,treff):
     if tool=='bowtie2':
         tool1="Bowtie2"
     aqcout=outdir+"/AlignStats/"
+    stat_outf=aqcout+sample+".picard.stats"
     fqcout=outdir+"/FastQC/"+sample
     bowtie2out=outdir+"/"+tool1+"/"+sample+"/"
     sam2bamout=outdir+"/Sorted_Files/Temp/"+sample+"/"
@@ -122,7 +124,9 @@ def makedf_alignment_recipe(sample, df,name, outdir,refbuild,ref,tool,treff):
         'alignment_recipe_workflow.sort_name':sortnameout,
         'alignment_recipe_workflow.aligner':tool,
         'alignment_recipe_workflow.buildref':treff,
-        'alignment_recipe_workflow.sort_pos':sortposout}]
+        'alignment_recipe_workflow.sort_pos':sortposout,
+        'alignment_recipe_workflow.refflat':refflat,
+        'alignment_recipe_workflow.stat_out': stat_outf}]
     jsonStr = json.dumps(dat,indent=4,sort_keys=True)
 #    print(jsonStr)
     return jsonStr

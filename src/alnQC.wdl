@@ -16,7 +16,7 @@ task aqc {
     }
 
     command {
-        samtools stats ${sam_input}|grep ^SN > ${aqc_out} 
+        samtools stats ${sam_input}|grep ^SN|cut -f2- >${aqc_out}
     }
     meta {
         author: "Apaala Chatterjee"
